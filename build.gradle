@@ -106,12 +106,28 @@ java {
 }
 
 jar {
-	from("LICENSE") {
+	from("LICENSE.txt") {
 		rename { "${it}_${base.archivesName}"}
 	}
 }
 
 tasks.publish.dependsOn build
+
+sourceSets {
+	orientationGeometry {
+		java {
+			srcDirs = ['src/main/java', 'src/verification/java']
+			include '**/OrientationTransform.java', '**/OrientationTransformTest.java'
+		}
+	}
+}
+tasks.register('orientationGeometryTest', JavaExec) {
+	dependsOn orientationGeometryClasses
+	classpath = sourceSets.orientationGeometry.runtimeClasspath
+	mainClass = 'fi.dy.masa.litematica.util.OrientationTransformTest'
+}
+tasks.named('check') { dependsOn orientationGeometryTest }
+
 publishing {
 	publications {
 		mavenJava(MavenPublication) {

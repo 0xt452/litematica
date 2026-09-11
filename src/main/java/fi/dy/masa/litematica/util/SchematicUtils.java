@@ -74,6 +74,16 @@ public class SchematicUtils
 {
     private static long areaMovedTime;
 
+    private static boolean canEditPlacement(SchematicPlacement placement)
+    {
+        if (placement.getVerticalOrientation() != VerticalOrientation.UP)
+        {
+            InfoUtils.showGuiOrInGameMessage(MessageType.ERROR, "litematica.message.vertical_orientation.edit_source");
+            return false;
+        }
+        return true;
+    }
+
     public static boolean saveSchematic(boolean inMemoryOnly)
     {
         SelectionManager sm = DataManager.getSelectionManager();
@@ -117,7 +127,7 @@ public class SchematicUtils
 
         if (placement != null)
         {
-            SchematicHolder.getInstance().removeSchematic(placement.getSchematic());
+            SchematicHolder.getInstance().removeSchematic(placement.getSourceSchematic());
         }
         else
         {
@@ -416,6 +426,7 @@ public class SchematicUtils
                     if (part.getBox().containsPos(pos))
                     {
                         SchematicPlacement placement = part.getPlacement();
+                        if (!canEditPlacement(placement)) return false;
                         String regionName = part.getSubRegionName();
                         LitematicaBlockStateContainer container = placement.getSchematic().getSubRegionContainer(regionName);
                         BlockPos posSchematic = getSchematicContainerPositionFromWorldPosition(pos, placement.getSchematic(),
@@ -475,6 +486,7 @@ public class SchematicUtils
                     if (part.getBox().containsPos(posStart))
                     {
                         SchematicPlacement placement = part.getPlacement();
+                        if (!canEditPlacement(placement)) return false;
                         String regionName = part.getSubRegionName();
                         LitematicaBlockStateContainer container = placement.getSchematic().getSubRegionContainer(regionName);
                         BlockPos posStartSchematic = getSchematicContainerPositionFromWorldPosition(posStart, placement.getSchematic(),
@@ -618,6 +630,7 @@ public class SchematicUtils
                                                    Level world)
     {
         SchematicPlacement schematicPlacement = part.getPlacement();
+        if (!canEditPlacement(schematicPlacement)) return false;
         String selected = schematicPlacement.getSelectedSubRegionName();
         List<String> regions = new ArrayList<>();
         final BlockState air = Blocks.AIR.defaultBlockState();
@@ -730,6 +743,7 @@ public class SchematicUtils
                                                      Level world)
     {
         SchematicPlacement schematicPlacement = part.getPlacement();
+        if (!canEditPlacement(schematicPlacement)) return false;
         String selected = schematicPlacement.getSelectedSubRegionName();
         List<String> regions = new ArrayList<>();
 

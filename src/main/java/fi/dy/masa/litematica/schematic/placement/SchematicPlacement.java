@@ -43,6 +43,7 @@ import fi.dy.masa.litematica.selection.Box;
 import fi.dy.masa.litematica.util.BlockInfoListType;
 import fi.dy.masa.litematica.util.FileType;
 import fi.dy.masa.litematica.util.PositionUtils;
+import fi.dy.masa.litematica.util.VerticalOrientation;
 
 public class SchematicPlacement
 {
@@ -54,7 +55,9 @@ public class SchematicPlacement
     private final Map<String, SubRegionPlacement> relativeSubRegionPlacements;
     private final int subRegionCount;
     private SchematicVerifier verifier;
-    private final LitematicaSchematic schematic;
+    private final LitematicaSchematic sourceSchematic;
+    private LitematicaSchematic schematic;
+    private VerticalOrientation verticalOrientation = VerticalOrientation.UP;
     private BlockPos origin;
     private String name;
     private Rotation rotation;
@@ -99,6 +102,7 @@ public class SchematicPlacement
         this.relativeSubRegionPlacements = new HashMap<>();
         this.hashId = hash != null ? hash : UUID.randomUUID();
         this.schematic = schematic;
+        this.sourceSchematic = schematic;
         this.schematicFile = schematic.getFile();
         this.origin = origin;
         this.name = name;
@@ -280,6 +284,64 @@ public class SchematicPlacement
     public LitematicaSchematic getSchematic()
     {
         return schematic;
+    }
+
+    public LitematicaSchematic getSourceSchematic()
+    {
+        return this.sourceSchematic;
+    }
+
+    public VerticalOrientation getVerticalOrientation()
+    {
+        return this.verticalOrientation;
+    }
+
+    public VerticalOrientation getFacingOrientation()
+    {
+        BlockPos normal = PositionUtils.getTransformedBlockPos(this.verticalOrientation.transform(new BlockPos(0, 1, 0)), this.mirror, this.rotation);
+        return orientationForNormal(normal);
+    }
+
+    public void setFacingOrientation(VerticalOrientation face, IMessageConsumer feedback)
+    {
+        BlockPos normal = PositionUtils.getReverseTransformedBlockPos(face.transform(new BlockPos(0, 1, 0)), this.mirror, this.rotation);
+        this.setVerticalOrientation(orientationForNormal(normal), feedback);
+    }
+
+    private static VerticalOrientation orientationForNormal(BlockPos normal)
+    {
+        for (VerticalOrientation orientation : VerticalOrientation.values())
+        {
+            if (orientation.transform(new BlockPos(0, 1, 0)).equals(normal)) return orientation;
+        }
+        throw new IllegalArgumentException("Invalid face normal: " + normal);
+    }
+
+    public void setVerticalOrientation(VerticalOrientation orientation, IMessageConsumer feedback)
+    {
+        if (this.isLocked())
+        {
+            feedback.addMessage(MessageType.ERROR, "litematica.message.placement.cant_modify_is_locked");
+            return;
+        }
+        if (this.verticalOrientation == orientation) return;
+        // Build first so a failure cannot leave the placement manager with stale chunk bounds.
+        LitematicaSchematic next = this.sourceSchematic.createOrientedCopy(orientation);
+        this.placementManager.onPrePlacementChange(this);
+        this.relativeSubRegionPlacements.replaceAll((name, region) ->
+                region.reoriented(this.verticalOrientation, orientation, next.getSubRegionPosition(name)));
+        this.schematic = next;
+        this.verticalOrientation = orientation;
+        this.materialList = null;
+        DataManager.setMaterialList(null);
+        if (this.verifier != null) this.verifier.reset();
+        this.checkAreSubRegionsModified();
+        this.onModified(this.placementManager);
+    }
+
+    public void refreshOrientedSchematic()
+    {
+        this.schematic = this.sourceSchematic.createOrientedCopy(this.verticalOrientation);
     }
 
     @Nullable
@@ -975,6 +1037,7 @@ public class SchematicPlacement
             obj.add("name", new JsonPrimitive(this.name));
             obj.add("origin", arr);
             obj.add("rotation", new JsonPrimitive(this.rotation.name()));
+            obj.addProperty("vertical_orientation", this.verticalOrientation.name());
             obj.add("mirror", new JsonPrimitive(this.mirror.name()));
             obj.add("ignore_entities", new JsonPrimitive(this.ignoreEntities()));
             obj.add("enabled", new JsonPrimitive(this.isEnabled()));
@@ -1060,6 +1123,8 @@ public class SchematicPlacement
             boolean enableRender = JsonUtils.getBoolean(obj, "enable_render");
 
             SchematicPlacement schematicPlacement = new SchematicPlacement(schematic, pos, name, enabled, enableRender, hashCode);
+            schematicPlacement.verticalOrientation = VerticalOrientation.fromName(JsonUtils.getString(obj, "vertical_orientation"));
+            schematicPlacement.refreshOrientedSchematic();
             schematicPlacement.rotation = rotation;
             schematicPlacement.mirror = mirror;
             schematicPlacement.ignoreEntities = JsonUtils.getBoolean(obj, "ignore_entities");
@@ -1110,6 +1175,7 @@ public class SchematicPlacement
                         if (placement != null)
                         {
                             String placementName = placementObj.get("name").getAsString();
+                            placement = placement.withDefaultPosition(schematicPlacement.schematic.getSubRegionPosition(placementName));
                             schematicPlacement.relativeSubRegionPlacements.put(placementName, placement);
                         }
                     }

@@ -564,7 +564,7 @@ public class SchematicPlacementManager
 
         for (SchematicPlacement placement : this.schematicPlacements)
         {
-            if (placement.getSchematic() == schematic)
+            if (placement.getSchematic() == schematic || placement.getSourceSchematic() == schematic)
             {
                 list.add(placement);
             }
@@ -581,7 +581,7 @@ public class SchematicPlacementManager
         {
             SchematicPlacement placement = this.schematicPlacements.get(i);
 
-            if (placement.getSchematic() == schematic)
+            if (placement.getSchematic() == schematic || placement.getSourceSchematic() == schematic)
             {
                 if (placement.hasVerifier())
                 {
@@ -795,8 +795,12 @@ public class SchematicPlacementManager
     {
         for (SchematicPlacement placement : this.schematicPlacements)
         {
-            if (placement.getSchematic() == schematic)
+            if (placement.getSchematic() == schematic || placement.getSourceSchematic() == schematic)
             {
+                if (placement.getSourceSchematic() == schematic)
+                {
+                    placement.refreshOrientedSchematic();
+                }
                 this.markChunksForRebuild(placement);
             }
         }

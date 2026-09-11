@@ -158,6 +158,73 @@ public class LitematicaSchematic
 		return this.metadata.getEnclosingSize();
 	}
 
+	/** A private placement view; never changes the shared source schematic or its file. */
+	public LitematicaSchematic createOrientedCopy(VerticalOrientation orientation)
+	{
+		if (orientation == VerticalOrientation.UP) return this;
+		LitematicaSchematic copy = new LitematicaSchematic(this.schematicFile, this.schematicType);
+		copy.metadata.readData(this.metadata.writeData());
+		copy.totalBlocksReadFromWorld = this.totalBlocksReadFromWorld;
+		Map<BlockState, BlockState> states = new HashMap<>();
+		for (String name : this.blockContainers.keySet())
+		{
+			BlockPos size = this.subRegionSizes.get(name);
+			BlockPos end = PositionUtils.getRelativeEndPositionFromAreaSize(size);
+			BlockPos min = new BlockPos(Math.min(0, end.getX()), Math.min(0, end.getY()), Math.min(0, end.getZ()));
+			BlockPos rotatedSize = orientation.transform(size);
+			BlockPos rotatedEnd = PositionUtils.getRelativeEndPositionFromAreaSize(rotatedSize);
+			BlockPos rotatedMin = new BlockPos(Math.min(0, rotatedEnd.getX()), Math.min(0, rotatedEnd.getY()), Math.min(0, rotatedEnd.getZ()));
+			copy.subRegionPositions.put(name, orientation.transform(this.subRegionPositions.get(name)));
+			copy.subRegionSizes.put(name, rotatedSize);
+			LitematicaBlockStateContainer source = this.blockContainers.get(name);
+			LitematicaBlockStateContainer target = new LitematicaBlockStateContainer(Math.abs(rotatedSize.getX()), Math.abs(rotatedSize.getY()), Math.abs(rotatedSize.getZ()));
+			for (int y = 0; y < Math.abs(size.getY()); ++y)
+			for (int z = 0; z < Math.abs(size.getZ()); ++z)
+			for (int x = 0; x < Math.abs(size.getX()); ++x)
+			{
+				BlockPos dest = orientation.transform(min.offset(x, y, z)).subtract(rotatedMin);
+				BlockState state = states.computeIfAbsent(source.get(x, y, z), s -> VerticalBlockStateTransform.transform(s, orientation));
+				target.set(dest.getX(), dest.getY(), dest.getZ(), state);
+			}
+			copy.blockContainers.put(name, target);
+			Map<BlockPos, CompoundData> tiles = new HashMap<>();
+			Map<BlockPos, CompoundData> sourceTiles = this.tileEntities.get(name);
+			if (sourceTiles != null) sourceTiles.forEach((pos, data) -> {
+				BlockPos dest = orientation.transform(min.offset(pos)).subtract(rotatedMin);
+				CompoundData tag = data.copy();
+				DataTypeUtils.writeBlockPosToTag(dest, tag);
+				tiles.put(dest, tag);
+			});
+			copy.tileEntities.put(name, tiles);
+			copy.pendingBlockTicks.put(name, rotateTicks(this.pendingBlockTicks.get(name), min, rotatedMin, orientation));
+			copy.pendingFluidTicks.put(name, rotateTicks(this.pendingFluidTicks.get(name), min, rotatedMin, orientation));
+			List<EntityInfo> rotatedEntities = new ArrayList<>();
+			List<EntityInfo> sourceEntities = this.entities.get(name);
+			if (sourceEntities != null) for (EntityInfo entity : sourceEntities)
+			{
+				Vec3 pos = orientation.transformPoint(entity.posVec());
+				CompoundData tag = entity.nbt().copy();
+				DataTypeUtils.putVec3dCodec(tag, pos, "Pos");
+				// Minecraft entities stay upright; only their positions are tilted.
+				rotatedEntities.add(new EntityInfo(pos, tag));
+			}
+			copy.entities.put(name, rotatedEntities);
+		}
+		copy.metadata.setEnclosingSize(PositionUtils.getEnclosingAreaSize(new ArrayList<>(copy.getAreas().values())));
+		return copy;
+	}
+
+	private static <T> Map<BlockPos, ScheduledTick<T>> rotateTicks(@Nullable Map<BlockPos, ScheduledTick<T>> source,
+	        BlockPos min, BlockPos rotatedMin, VerticalOrientation orientation)
+	{
+		Map<BlockPos, ScheduledTick<T>> result = new HashMap<>();
+		if (source != null) source.forEach((pos, tick) -> {
+			BlockPos dest = orientation.transform(min.offset(pos)).subtract(rotatedMin);
+			result.put(dest, new ScheduledTick<>(tick.type(), dest, tick.triggerTick(), tick.priority(), tick.subTickOrder()));
+		});
+		return result;
+	}
+
 	public int getTotalBlocksReadFromWorld()
 	{
 		return this.totalBlocksReadFromWorld;

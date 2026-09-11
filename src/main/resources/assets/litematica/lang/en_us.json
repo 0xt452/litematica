@@ -1,4 +1,13 @@
 {
+    "litematica.gui.button.vertical_orientation": "Face: %s",
+    "litematica.gui.button.vertical_orientation.hover": "Turn the original top toward the selected world direction.\nLeft-click: next; right-click: previous.\nExisting Rotation and Mirror settings are accounted for.\nSubregion rotations are applied afterward.\nUnsupported sideways block states stay unchanged.\nEntities only change position.",
+    "litematica.gui.label.vertical_orientation.up": "Up",
+    "litematica.gui.label.vertical_orientation.north": "North",
+    "litematica.gui.label.vertical_orientation.south": "South",
+    "litematica.gui.label.vertical_orientation.east": "East",
+    "litematica.gui.label.vertical_orientation.west": "West",
+    "litematica.gui.label.vertical_orientation.down": "Down",
+    "litematica.message.vertical_orientation.edit_source": "Set Face to Up before editing schematic blocks, or save this oriented placement as a new schematic first.",
     "block.litematica.black_glass_fallback": "Black Glass (Fallback)",
     "block.litematica.black_glass_pane_fallback": "Black Glass Pane (Fallback)",
     "block.litematica.blue_glass_fallback": "Blue Glass (Fallback)",

@@ -117,6 +117,9 @@ public class GuiPlacementConfiguration  extends GuiListBase<SubRegionPlacement, 
         this.createButton(x, y, width, ButtonListener.Type.ROTATE);
         y += 21;
 
+        this.createButton(x, y, width, ButtonListener.Type.VERTICAL_ORIENTATION);
+        y += 21;
+
         this.createButton(x, y, width, ButtonListener.Type.MIRROR);
         y += 21;
 
@@ -126,7 +129,7 @@ public class GuiPlacementConfiguration  extends GuiListBase<SubRegionPlacement, 
 
         // Move these buttons to the bottom (left) of the screen, if the height isn't enough for them
         // to fit below the other buttons
-        if (GuiUtils.getScaledWindowHeight() < 328)
+        if (GuiUtils.getScaledWindowHeight() < 349)
         {
             x = 10;
             y = this.getScreenHeight() - 22;
@@ -249,6 +252,13 @@ public class GuiPlacementConfiguration  extends GuiListBase<SubRegionPlacement, 
                 break;
             }
 
+            case VERTICAL_ORIENTATION:
+            {
+                String value = StringUtils.translate("litematica.gui.label.vertical_orientation." + this.placement.getFacingOrientation().name().toLowerCase(java.util.Locale.ROOT));
+                label = type.getDisplayName(value);
+                break;
+            }
+
             case NUDGE_COORD_X:
             case NUDGE_COORD_Y:
             case NUDGE_COORD_Z:
@@ -276,6 +286,10 @@ public class GuiPlacementConfiguration  extends GuiListBase<SubRegionPlacement, 
 
         ButtonGeneric button = new ButtonGeneric(x, y, width, 20, label);
 
+        if (type == ButtonListener.Type.VERTICAL_ORIENTATION)
+        {
+            button.setHoverStrings(type.getHoverText().split("\n"));
+        }
         this.addButton(button, listener);
 
         if (type == ButtonListener.Type.RESET_SUB_REGIONS)
@@ -376,6 +390,10 @@ public class GuiPlacementConfiguration  extends GuiListBase<SubRegionPlacement, 
                     break;
                 }
 
+                case VERTICAL_ORIENTATION:
+                    this.placement.setFacingOrientation(this.placement.getFacingOrientation().cycle(mouseButton == 1), this.parent);
+                    break;
+
                 case MOVE_TO_PLAYER:
                 {
                     BlockPos pos = BlockPos.containing(mc.player.position());
@@ -454,6 +472,7 @@ public class GuiPlacementConfiguration  extends GuiListBase<SubRegionPlacement, 
         {
             RENAME_PLACEMENT        ("litematica.gui.button.rename"),
             ROTATE                  ("litematica.gui.button.rotation_value"),
+            VERTICAL_ORIENTATION    ("litematica.gui.button.vertical_orientation", "litematica.gui.button.vertical_orientation.hover"),
             MIRROR                  ("litematica.gui.button.mirror_value"),
             MOVE_TO_PLAYER          ("litematica.gui.button.move_to_player"),
             NUDGE_COORD_X           (""),

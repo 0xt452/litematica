@@ -20,6 +20,7 @@ import fi.dy.masa.malilib.util.position.PositionUtils.CoordinateType;
 import fi.dy.masa.litematica.Litematica;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.util.PositionUtils;
+import fi.dy.masa.litematica.util.VerticalOrientation;
 
 public class SubRegionPlacement
 {
@@ -158,6 +159,20 @@ public class SubRegionPlacement
     public BlockPos getDefaultPos()
     {
         return this.defaultPos;
+    }
+
+    SubRegionPlacement withDefaultPosition(@Nullable BlockPos defaultPosition)
+    {
+        return new SubRegionPlacement(this.name, defaultPosition != null ? defaultPosition : this.defaultPos,
+                this.pos, this.rotation, this.mirror, this.enabled, this.renderingEnabled,
+                this.ignoreEntities, this.coordinateLockMask);
+    }
+
+    SubRegionPlacement reoriented(VerticalOrientation oldOrientation, VerticalOrientation newOrientation, @Nullable BlockPos defaultPosition)
+    {
+        SubRegionPlacement result = this.withDefaultPosition(defaultPosition);
+        result.pos = newOrientation.transform(oldOrientation.inverse(this.pos));
+        return result;
     }
 
     public BlockPos getPos()
